@@ -32,18 +32,25 @@ public class MatchPattern {
       switch (pattern.charAt(cursor)) {
         case WILDCARD_CHAR:
           captureSegment();
+          start = ++cursor;
           break;
         case OPEN_TOKEN:
+          captureSegment();
           captureNamedSegment();
           tokenReferences++;
           break;
       }
     }
+
+    if (start < pattern.length()) {
+      captureSegment();
+    }
+
     return Matcher.of(tokenReferences, segments.toArray(new Segment[segments.size()]));
   }
 
   private void captureSegment() {
-    segments.add(Segment.of(pattern.substring(start, cursor), start, start = cursor));
+    segments.add(Segment.of(pattern.substring(start, cursor), start, cursor));
   }
 
   private void captureNamedSegment() {
@@ -51,8 +58,9 @@ public class MatchPattern {
     for (; cursor < pattern.length(); cursor++) {
       switch (pattern.charAt(cursor)) {
         case CLOSE_TOKEN:
-          segments.add(Segment.of(pattern.substring(start, tokenStart),
-                  tokenStart, cursor, pattern.substring(tokenStart + 1, cursor)));
+          segments.add(Segment
+                  .namedParm(pattern.substring(tokenStart + 1, cursor), tokenStart, cursor));
+          start = cursor + 1;
           return;
       }
     }
@@ -60,44 +68,44 @@ public class MatchPattern {
   }
 
   public static class Segment {
-    private final String before;
+    private final String pattern;
     private final int start;
     private final int end;
-    private final String name;
+    private final boolean parameter;
 
-    private Segment(String before, int start, int end, String name) {
-      this.before = before;
-      this.name = name;
+    private Segment(String pattern, int start, int end, boolean parameter) {
+      this.pattern = pattern;
       this.start = start;
       this.end = end;
+      this.parameter = parameter;
     }
 
-    public static Segment of(String before, int start, int end) {
-      return of(before, start, end, "");
+    public static Segment of(String pattern, int start, int end) {
+      return new Segment(pattern, start, end, false);
     }
 
-    public static Segment of(String before, int start, int end, String name) {
-      return new Segment(before, start, end, name);
+    public static Segment namedParm(String pattern, int start, int end) {
+      return new Segment(pattern, start, end, true);
     }
 
-    public String getBefore() {
-      return before;
+    public String getPattern() {
+      return pattern;
     }
 
-    public int getStart() {
-      return start;
+    public int getStart(int offset) {
+      return start - (offset - start);
     }
 
-    public int getEnd() {
-      return end;
+    public int getEnd(int offset) {
+      return end + offset;
     }
 
-    public String getName() {
-      return name;
+    public boolean isParameter() {
+      return parameter;
     }
 
-    public boolean isCapture() {
-      return !name.equals("");
+    public boolean isStartingWildcard() {
+      return "".equals(pattern) && (start | end) == 0;
     }
   }
 

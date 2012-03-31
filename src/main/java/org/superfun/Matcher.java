@@ -1,6 +1,8 @@
 package org.superfun;
 
 
+import static org.superfun.MatchResult.defaultFalseResult;
+
 /**
  * @author Mike Brock
  */
@@ -17,56 +19,82 @@ public class Matcher {
     return new Matcher(tokenReferences, segments);
   }
 
-
   public MatchResult match(final String toMatch) {
-    final int length = toMatch.length();
+    try {
+      MatchPattern.Segment currentSegment;
+      int offset = 0;
+      int segmentIndex = 0;
+      int tokenIndex = 0;
 
-    int start = 0;
-    int segmentIndex = 0;
-    int tokenIndex = 0;
+      final String[] keys = new String[tokenReferences];
+      final String[] vals = new String[tokenReferences];
 
-    MatchPattern.Segment currentSegment = segments[segmentIndex];
+      currentSegment = segments[0];
 
-    final String[] keys = new String[tokenReferences];
-    final String[] vals = new String[tokenReferences];
-
-    for (int cursor = currentSegment.getEnd(); cursor < length; cursor++) {
-      if (!toMatch.substring(start, currentSegment.getStart())
-              .equals(currentSegment.getBefore())) {
-        return MatchResult.defaultFalseResult();
+      if (currentSegment.isStartingWildcard()) {
+        offset = 1;
       }
 
-      if (currentSegment.isCapture()) {
-        boolean lastToken = (segmentIndex + 1 == segments.length);
-        if (lastToken) {
-          keys[tokenIndex] = currentSegment.getName();
-          vals[tokenIndex] = toMatch.substring(currentSegment.getStart(), length - 1);
+      do {
+        if (currentSegment.isParameter()) {
+          keys[tokenIndex] = currentSegment.getPattern();
+
+          int nextOffset = calculateOffsetToNextSegment(toMatch, offset, segmentIndex);
+          if (nextOffset == Integer.MIN_VALUE) {
+            return defaultFalseResult();
+          }
+
+          vals[tokenIndex++] = toMatch.substring(currentSegment.getStart(offset), nextOffset);
+
+          segmentIndex++;
+          offset = nextOffset + 1;
+        }
+        else if ((offset = calculateOffset(toMatch, offset, currentSegment)) == Integer.MIN_VALUE) {
+          return defaultFalseResult();
+        }
+
+        if (++segmentIndex < segments.length) {
+          currentSegment = segments[segmentIndex];
         }
         else {
-          final MatchPattern.Segment lookAhead = segments[++segmentIndex];
-
-          if (rangeCheck(length, lookAhead.getStart())) {
-            keys[tokenIndex] = currentSegment.getName();
-            vals[tokenIndex] = toMatch.substring(currentSegment.getStart(), lookAhead.getStart());
-          }
-          else {
-            return MatchResult.defaultFalseResult();
-          }
+          break;
         }
       }
+      while (true);
 
-      start = cursor;
+      if (tokenReferences == 0)
+        return MatchResult.defaultTrueResult();
+      else
+        return MatchResult.of(true, keys, vals);
     }
-
-    if (tokenReferences == 0)
-      return MatchResult.defaultTrueResult();
-    else
-      return MatchResult.of(true, keys, vals);
+    catch (ArrayIndexOutOfBoundsException e) {
+      return MatchResult.defaultFalseResult();
+    }
   }
 
-  public boolean rangeCheck(int len, int pos) {
-    return pos >= len;
+  public int calculateOffsetToNextSegment(final String toMatch, final int offset, final int segmentIndex) {
+    if (segmentIndex + 1 < segments.length) {
+      final int _offset = calculateOffset(toMatch, offset, segments[segmentIndex + 1]);
+      if (_offset == Integer.MIN_VALUE) {
+        return _offset;
+      }
+      else {
+        return _offset - 1;
+      }
+    }
+    else {
+      return toMatch.length();
+    }
   }
 
+  public static int calculateOffset(final String toMatch, int offset, MatchPattern.Segment to) {
+    final int idx = toMatch.indexOf(to.getPattern(), offset);
+    if (idx < 0) {
+      return Integer.MIN_VALUE;
+    }
+    else {
+      return idx + to.getPattern().length();
+    }
+  }
 }
 
