@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <artifactId>superfunmatch</artifactId>
+    <groupId>org.superfun</groupId>
+    <version>1.0-SNAPSHOT</version>
+    <modelVersion>4.0.0</modelVersion>
+    <name>Superfunmatch!</name>
+    <description>A weekend project for OCPSoft Rewrite</description>
+
+    <dependencies>
+
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.8.1</version>
+        </dependency>
+
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <skipTests>false</skipTests>
+                    <additionalClasspathElements>
+                        <additionalClasspathElement>${basedir}/test-classes/</additionalClasspathElement>
+                        <additionalClasspathElement>${basedir}/src/test/java/</additionalClasspathElement>
+                    </additionalClasspathElements>
+                    <useSystemClassLoader>false</useSystemClassLoader>
+
+                    <systemProperties>
+                        <property>
+                            <name>java.io.tmpdir</name>
+                            <value>${project.build.directory}</value>
+                        </property>
+                        <property>
+                            <name>log4j.output.dir</name>
+                            <value>${project.build.directory}</value>
+                        </property>
+                    </systemProperties>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>
